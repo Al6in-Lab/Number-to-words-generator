@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Number ↔ Words Converter</title>
+  <style>
+    /* Base styles */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; width: 100%; }
+    body {
+      font-family: 'Segoe UI', Tahoma, sans-serif;
+      background-color: #f0f4f8;
+      color: #111827;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .card {
+      background: #ffffff;
+      border-radius: 12px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      width: 90%;
+      max-width: 480px;
+      padding: 24px;
+    }
+    h1, h2 {
+      text-align: center;
+      color: #1e40af;
+      margin-bottom: 16px;
+    }
+    .hidden { display: none; }
+    .button-group, .back-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-bottom: 24px;
+    }
+    button {
+      padding: 12px;
+      font-size: 1rem;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      background: #1e40af;
+      color: #ffffff;
+      transition: background 0.2s;
+    }
+    button:hover { background: #3744a8; }
+    input, textarea {
+      width: 100%;
+      padding: 12px;
+      border: 1px solid #d1d5db;
+      border-radius: 6px;
+      font-size: 1rem;
+      margin-bottom: 12px;
+      color: #111827;
+    }
+    textarea { resize: vertical; height: 120px; }
+    .result {
+      margin-top: 16px;
+      padding: 12px;
+      background: #eef2ff;
+      border-radius: 6px;
+      color: #1e293b;
+      white-space: pre-wrap;
+      word-break: break-word;
+      min-height: 48px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Landing Card -->
+  <div class="card" id="landing">
+    <h1>Number ↔ Words</h1>
+    <div class="button-group">
+      <button id="btnNum2Words">Number → Words</button>
+      <button id="btnWords2Num">Words → Number</button>
+    </div>
+  </div>
+
+  <!-- Number to Words Card -->
+  <div class="card hidden" id="cardNum2Words">
+    <h2>Number → Words</h2>
+    <div class="back-group">
+      <button id="backFromNum2Words">← Back</button>
+    </div>
+    <input type="text" id="inputNum" placeholder="Enter whole number..." />
+    <button id="convertNum2Words">Convert</button>
+    <div class="result" id="outputWords"></div>
+  </div>
+
+  <!-- Words to Number Card -->
+  <div class="card hidden" id="cardWords2Num">
+    <h2>Words → Number</h2>
+    <div class="back-group">
+      <button id="backFromWords2Num">← Back</button>
+    </div>
+    <textarea id="inputWords" placeholder="Enter number in words..."></textarea>
+    <button id="convertWords2Num">Convert</button>
+    <div class="result" id="outputNumber"></div>
+  </div>
+
+  <script>
+    /* Navigation Logic */
+    const landing = document.getElementById('landing');
+    const cardNum2Words = document.getElementById('cardNum2Words');
+    const cardWords2Num = document.getElementById('cardWords2Num');
+    document.getElementById('btnNum2Words').addEventListener('click', () => {
+      landing.classList.add('hidden');
+      cardNum2Words.classList.remove('hidden');
+    });
+    document.getElementById('btnWords2Num').addEventListener('click', () => {
+      landing.classList.add('hidden');
+      cardWords2Num.classList.remove('hidden');
+    });
+    document.getElementById('backFromNum2Words').addEventListener('click', () => {
+      cardNum2Words.classList.add('hidden');
+      landing.classList.remove('hidden');
+      document.getElementById('outputWords').textContent = '';
+      document.getElementById('inputNum').value = '';
+    });
+    document.getElementById('backFromWords2Num').addEventListener('click', () => {
+      cardWords2Num.classList.add('hidden');
+      landing.classList.remove('hidden');
+      document.getElementById('outputNumber').textContent = '';
+      document.getElementById('inputWords').value = '';
+    });
+
+    /* Conversion Data and Functions */
+    const ones = ['', 'one','two','three','four','five','six','seven','eight','nine'];
+    const teens = {10:'ten',11:'eleven',12:'twelve',13:'thirteen',14:'fourteen',15:'fifteen',16:'sixteen',17:'seventeen',18:'eighteen',19:'nineteen'};
+    const tens = ['', '', 'twenty','thirty','forty','fifty','sixty','seventy','eighty','ninety'];
+    const scaleNames = [
+      '','thousand','million','billion','trillion','quadrillion','quintillion','sextillion','septillion',
+      'octillion','nonillion','decillion','undecillion','duodecillion','tredecillion','quattuordecillion',
+      'quindecillion','sexdecillion','septendecillion','octodecillion','novemdecillion','vigintillion',
+      'centillion','millillion','millionillion'
+    ];
+    const onesMap = {zero:0, one:1, two:2, three:3, four:4, five:5, six:6, seven:7, eight:8, nine:9};
+    const teensMap = Object.fromEntries(Object.entries(teens).map(([k,v])=>[v,parseInt(k)]));
+    const tensMap = {twenty:20, thirty:30, forty:40, fifty:50, sixty:60, seventy:70, eighty:80, ninety:90};
+    const scaleMap = {
+      thousand:3, million:6, billion:9, trillion:12, quadrillion:15, quintillion:18,
+      sextillion:21, septillion:24, octillion:27, nonillion:30, decillion:33,
+      undecillion:36, duodecillion:39, tredecillion:42, quattuordecillion:45, quindecillion:48,
+      sexdecillion:51, septendecillion:54, octodecillion:57, novemdecillion:60, vigintillion:63,
+      centillion:303, millillion:3003, millionillion:6000
+    };
+
+    // Number → Words
+    document.getElementById('convertNum2Words').addEventListener('click', () => {
+      const numStr = document.getElementById('inputNum').value.trim();
+      const out = document.getElementById('outputWords');
+      if (!/^\d+$/.test(numStr)) { out.textContent = 'Enter a valid whole number.'; return; }
+      out.textContent = numToWords(numStr);
+    });
+
+    function numToWords(numStr) {
+      if (numStr === '0') return 'zero';
+      // pad groups of 3
+      let s = numStr;
+      while (s.length % 3) s = '0' + s;
+      const chunks = s.match(/.{1,3}/g);
+      const parts = [];
+      chunks.forEach((grp, i) => {
+        const n = parseInt(grp, 10);
+        if (!n) return;
+        let seg = '';
+        const h = Math.floor(n/100), rem = n % 100;
+        if (h) seg += ones[h] + ' hundred ';
+        if (rem < 20 && rem >= 10) seg += teens[rem] + ' ';
+        else if (rem >= 20) {
+          seg += tens[Math.floor(rem/10)] + ' ';
+          if (rem % 10) seg += ones[rem % 10] + ' ';
+        } else if (rem > 0) seg += ones[rem] + ' ';
+        const idx = chunks.length - i - 1;
+        if (scaleNames[idx]) seg += scaleNames[idx] + ' ';
+        parts.push(seg.trim());
+      });
+      return parts.join(' ').replace(/\s+/g, ' ');
+    }
+
+    // Words → Number
+    document.getElementById('convertWords2Num').addEventListener('click', () => {
+      const txt = document.getElementById('inputWords').value.trim().toLowerCase();
+      const out = document.getElementById('outputNumber');
+      try {
+        out.textContent = wordsToNum(txt);
+      } catch(e) {
+        out.textContent = e.message;
+      }
+    });
+
+    function wordsToNum(txt) {
+      if (!txt) throw new Error('Enter words representing a number.');
+      const tokens = txt.split(/\s+/);
+      let total = 0n, curr = 0n;
+      tokens.forEach(w => {
+        if (w in onesMap) curr += BigInt(onesMap[w]);
+        else if (w in teensMap) curr += BigInt(teensMap[w]);
+        else if (w in tensMap) curr += BigInt(tensMap[w]);
+        else if (w === 'hundred') curr *= 100n;
+        else if (w in scaleMap) {
+          curr *= 10n ** BigInt(scaleMap[w]);
+          total += curr;
+          curr = 0n;
+        } else throw new Error(`Unknown word: ${w}`);
+      });
+      total += curr;
+      return total.toString();
+    }
+  </script>
+</body>
+</html>
+
+
+
+</body>
+</html>
